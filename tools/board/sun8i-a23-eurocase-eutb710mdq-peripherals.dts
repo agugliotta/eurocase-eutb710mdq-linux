@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+#include "sun8i-a23-eurocase-eutb710mdq-diagnostic.dts"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+
+/ {
+    chosen {
+        bootargs = "console=ttyS0,115200 earlycon=uart8250,mmio32,0x01c28000,115200n8 maxcpus=1 clk_ignore_unused loglevel=7 panic=0 rdinit=/init";
+    };
+    aliases { i2c0 = &i2c0; i2c1 = &i2c1; };
+};
+
+&i2c0 {
+    clock-frequency = <400000>;
+    status = "okay";
+    touchscreen@40 {
+        compatible = "silead,gsl1680";
+        reg = <0x40>;
+        interrupt-parent = <&pio>;
+        interrupts = <1 5 IRQ_TYPE_EDGE_FALLING>; // PB5; stock caller flags=2
+        power-gpios = <&pio 6 10 GPIO_ACTIVE_HIGH>; // PG10, stock wakeup
+        touchscreen-size-x = <1024>;
+        touchscreen-size-y = <600>;
+        silead,max-fingers = <5>;
+        firmware-name = "eurocase-g739-gsl1680-1024x600.fw";
+        avdd-supply = <&reg_ldo_io1>;
+        vddio-supply = <&reg_ldo_io1>;
+    };
+};
+
+&i2c1 {
+    status = "okay";
+    accelerometer@18 {
+        compatible = "bosch,bma222e"; // Stock bma223 reports chip ID 0xf8
+        reg = <0x18>;
+        // Polling through IIO first; orientation/interrupt mapping deferred.
+    };
+};
+
+// Internal USB Wi-Fi: stock 0bda:8179, DLDO1=3.3 V supplied by tested SPL.
+&ehci0 { status = "okay"; };
+&ohci0 { status = "okay"; };
+
+&r_rsb {
+    status = "okay";
+    axp22x: pmic@3a3 {
+        compatible = "x-powers,axp223";
+        reg = <0x3a3>;
+        interrupt-parent = <&r_intc>;
+        interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_LOW>;
+        #address-cells = <0>;
+    };
+};
+#include "axp223.dtsi"
+
+// Preserve the enabled stock/SPL rails; CPU frequency scaling remains disabled.
+&reg_dcdc1 { regulator-always-on; regulator-min-microvolt = <3000000>; regulator-max-microvolt = <3000000>; };
+&reg_dcdc2 { regulator-always-on; regulator-min-microvolt = <1100000>; regulator-max-microvolt = <1100000>; };
+&reg_dcdc3 { regulator-always-on; regulator-min-microvolt = <1260000>; regulator-max-microvolt = <1260000>; };
+&reg_dcdc5 { regulator-always-on; regulator-min-microvolt = <1500000>; regulator-max-microvolt = <1500000>; };
+&reg_dc5ldo { regulator-always-on; regulator-min-microvolt = <1100000>; regulator-max-microvolt = <1100000>; };
+&reg_aldo1 { regulator-always-on; regulator-min-microvolt = <3000000>; regulator-max-microvolt = <3000000>; };
+&reg_aldo2 { regulator-always-on; regulator-min-microvolt = <2500000>; regulator-max-microvolt = <2500000>; };
+&reg_aldo3 { regulator-always-on; regulator-min-microvolt = <3000000>; regulator-max-microvolt = <3000000>; };
+&reg_dldo1 { regulator-always-on; regulator-min-microvolt = <3300000>; regulator-max-microvolt = <3300000>; };
+&reg_ldo_io1 {
+    status = "okay";
+    regulator-always-on;
+    regulator-min-microvolt = <3000000>;
+    regulator-max-microvolt = <3000000>;
+};
+&usbphy { usb1_vbus-supply = <&reg_dldo1>; };

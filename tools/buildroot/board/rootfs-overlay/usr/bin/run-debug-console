@@ -1,0 +1,13 @@
+#!/bin/sh
+# Development image only: a local root shell on ACM0, never on ACM1.
+sleep 1
+test -c /dev/ttyGS0 || exit 1
+setsid /bin/sh -c '
+    exec 0<>/dev/ttyGS0
+    exec 1>&0 2>&0
+    stty clocal -hupcl -ixon -ixoff
+    echo EUROCASE_SD_DEBUG_CONSOLE
+    uname -a
+    exec /bin/sh -i
+'
+sleep 2

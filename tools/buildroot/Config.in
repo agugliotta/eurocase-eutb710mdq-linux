@@ -1,0 +1,1 @@
+source "$BR2_EXTERNAL_TABLET_PATH/package/tablet-poc/Config.in"

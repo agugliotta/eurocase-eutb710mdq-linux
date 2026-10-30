@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+mount -t configfs configfs /sys/kernel/config
+g=/sys/kernel/config/usb_gadget/eutb
+mkdir "$g"
+echo 0x1d6b > "$g/idVendor"
+echo 0x0104 > "$g/idProduct"
+echo 0x0200 > "$g/bcdUSB"
+echo 0xEF > "$g/bDeviceClass"
+echo 0x02 > "$g/bDeviceSubClass"
+echo 0x01 > "$g/bDeviceProtocol"
+mkdir "$g/strings/0x409"
+echo eutb710mdq-sd-poc > "$g/strings/0x409/serialnumber"
+echo 'Eurocase Linux POC' > "$g/strings/0x409/manufacturer"
+echo 'SD Panel debug and data' > "$g/strings/0x409/product"
+mkdir "$g/configs/c.1" "$g/configs/c.1/strings/0x409"
+echo 'Debug and panel data' > "$g/configs/c.1/strings/0x409/configuration"
+echo 100 > "$g/configs/c.1/MaxPower"
+mkdir "$g/functions/acm.usb0" "$g/functions/acm.usb1"
+ln -s "$g/functions/acm.usb0" "$g/configs/c.1/"
+ln -s "$g/functions/acm.usb1" "$g/configs/c.1/"
+# Built-in drivers may finish probing after init has started.
+for attempt in 1 2 3 4 5; do
+    for udc in /sys/class/udc/*; do
+        test -e "$udc" || continue
+        echo "${udc##*/}" > "$g/UDC"
+        logger -t usb 'ACM ready: ttyGS0 debug, ttyGS1 reserved for data'
+        exit 0
+    done
+    sleep 1
+done
+logger -t usb 'No USB device controller found'
+exit 1

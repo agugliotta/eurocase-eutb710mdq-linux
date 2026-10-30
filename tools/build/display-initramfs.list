@@ -1,0 +1,18 @@
+dir /bin 0755 0 0
+dir /dev 0755 0 0
+dir /proc 0755 0 0
+dir /sys 0755 0 0
+dir /lib 0755 0 0
+dir /lib/firmware 0755 0 0
+dir /lib/firmware/silead 0755 0 0
+dir /lib/firmware/rtlwifi 0755 0 0
+file /bin/busybox /stock/stock-busybox 0755 0 0
+file /bin/read-events /out/read-events 0755 0 0
+file /bin/fb-bars /out/fb-bars 0755 0 0
+file /bin/iw /out/iw 0755 0 0
+slink /bin/sh busybox 0777 0 0
+file /init /work/peripherals-init 0755 0 0
+file /lib/firmware/silead/eurocase-g739-gsl1680-1024x600.fw /firmware/silead/eurocase-g739-gsl1680-1024x600.fw 0644 0 0
+file /lib/firmware/rtlwifi/rtl8188eufw.bin /firmware/rtlwifi/rtl8188eufw.bin 0644 0 0
+nod /dev/console 0600 0 0 c 5 1
+nod /dev/null 0666 0 0 c 1 3

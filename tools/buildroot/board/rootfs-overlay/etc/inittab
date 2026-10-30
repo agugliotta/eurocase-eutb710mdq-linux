@@ -1,0 +1,16 @@
+::sysinit:/bin/mount -t proc proc /proc
+::sysinit:/bin/mount -t sysfs sysfs /sys
+::sysinit:/bin/mount -t tmpfs -o mode=0755,size=16m tmpfs /run
+::sysinit:/bin/mount -t tmpfs -o mode=1777,size=32m tmpfs /tmp
+::sysinit:/bin/mkdir -p /dev/pts /dev/shm
+::sysinit:/bin/mount -t devpts devpts /dev/pts
+::sysinit:/bin/mount -t tmpfs -o mode=1777,size=16m tmpfs /dev/shm
+::sysinit:/bin/mkdir -p /run/log /run/lock /run/tmp
+::sysinit:/bin/ln -s . /run/run
+::sysinit:/bin/hostname tablet
+::sysinit:/sbin/syslogd -O /run/messages -s 64 -b 1
+::sysinit:/sbin/klogd
+::sysinit:/etc/init.d/setup-usb
+null::respawn:/usr/bin/run-panel
+null::respawn:/usr/bin/run-debug-console
+::shutdown:/bin/umount -a -r

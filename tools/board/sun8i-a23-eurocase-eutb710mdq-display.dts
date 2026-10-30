@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+#include "sun8i-a23-eurocase-eutb710mdq-peripherals.dts"
+#include <dt-bindings/pwm/pwm.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+    chosen {
+        bootargs = "console=tty0 console=ttyS0,115200 earlycon=uart8250,mmio32,0x01c28000,115200n8 maxcpus=2 clk_ignore_unused loglevel=7 panic=0 rdinit=/init";
+    };
+    backlight: backlight {
+        compatible = "pwm-backlight";
+        pwms = <&pwm 0 20000 PWM_POLARITY_INVERTED>;
+        enable-gpios = <&pio 7 6 GPIO_ACTIVE_HIGH>;
+        power-supply = <&reg_dc1sw>;
+        brightness-levels = <0 8 16 32 48 64 96 130>;
+        default-brightness-level = <3>;
+        post-pwm-on-delay-ms = <100>;
+    };
+    panel {
+        compatible = "eurocase,g739-panel";
+        backlight = <&backlight>;
+        power-supply = <&reg_dc1sw>;
+        enable-gpios = <&pio 7 7 GPIO_ACTIVE_HIGH>; // PH_CFG0 stock=0x11222222
+        pwms = <&pwm 1 66666 0>; // DT flag 0 = normal polarity
+        pwm-names = "vcom";
+        port {
+            panel_input: endpoint { remote-endpoint = <&tcon0_out_lcd>; };
+        };
+    };
+};
+
+&reg_dc1sw { regulator-enable-ramp-delay = <10000>; };
+&de { status = "okay"; };
+&tcon0 {
+    pinctrl-names = "default";
+    pinctrl-0 = <&lcd_rgb666_pins>;
+    status = "okay";
+};
+&tcon0_out {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    tcon0_out_lcd: endpoint@0 { reg = <0>; remote-endpoint = <&panel_input>; };
+};
+&pwm {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pwm0_pin &g739_pwm1_pin>;
+    status = "okay";
+};
+&pio {
+    g739_pwm1_pin: pwm1-pin {
+        pins = "PH1";
+        function = "pwm1";
+    };
+};
+&i2c0 {
+    touchscreen@40 {
+        touchscreen-size-x = <1024>;
+        touchscreen-size-y = <600>;
+    };
+};
+
+&codec {
+    allwinner,pa-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>;
+    allwinner,audio-routing = "Headphone", "HP", "Speaker", "HP";
+    status = "okay";
+};
+
+&lradc {
+    vref-supply = <&reg_aldo1>;
+    status = "okay";
+    button-home {
+        label = "Home";
+        linux,code = <KEY_HOME>;
+        channel = <0>;
+        voltage = <400000>; // Candidate from stock recovery ADC range 10..15
+    };
+};

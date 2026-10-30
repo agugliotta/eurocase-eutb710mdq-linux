@@ -1,0 +1,6 @@
+#!/bin/sh
+# An absent input device during boot or an app failure must not spin PID 1.
+sleep 2
+/usr/bin/tablet-poc --ui </dev/null 2>&1 | logger -t panel
+logger -t panel "Panel exited; restarting after delay"
+sleep 3

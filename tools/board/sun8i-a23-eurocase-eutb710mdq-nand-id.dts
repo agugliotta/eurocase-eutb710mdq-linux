@@ -1,0 +1,11 @@
+#include "sun8i-a23-eurocase-eutb710mdq-display.dts"
+
+&nfc {
+    status = "okay";
+    nand@0 {
+        reg = <0>;
+        allwinner,rb = <0>;
+        nand-bus-width = <8>;
+        eurocase,read-id-only;
+    };
+};

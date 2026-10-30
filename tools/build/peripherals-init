@@ -1,0 +1,18 @@
+#!/bin/sh
+/bin/busybox mount -t devtmpfs devtmpfs /dev
+/bin/busybox mount -t proc proc /proc
+/bin/busybox mount -t sysfs sysfs /sys
+echo EUROCASE_PERIPHERALS_INIT_REACHED > /dev/kmsg
+while true; do
+    if [ -c /dev/ttyGS0 ]; then
+        /bin/busybox setsid /bin/sh -c '
+            exec 0<>/dev/ttyGS0
+            exec 1>&0 2>&0
+            /bin/busybox stty clocal -hupcl -ixon -ixoff
+            echo EUROCASE_MAINLINE_USB_SHELL
+            /bin/busybox uname -a
+            exec /bin/sh -i
+        '
+    fi
+    /bin/busybox sleep 1
+done

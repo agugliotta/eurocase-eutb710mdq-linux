@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+// SD root filesystem and USB debug/data board variant.
+#include "sun8i-a23-eurocase-eutb710mdq-display.dts"
+
+/ {
+    aliases { mmc0 = &mmc0; };
+    chosen {
+        /delete-property/ stdout-path;
+        bootargs = "console=tty0 console=ttyGS0,115200 maxcpus=2 clk_ignore_unused loglevel=3 panic=0 root=/dev/mmcblk0p2 rootfstype=squashfs rootwait ro init=/sbin/init consoleblank=0";
+    };
+};
+
+// UART0 on PF2/PF4 conflicts with the stock SD bus; retain USB console instead.
+&uart0 { status = "disabled"; };
+&nfc { status = "disabled"; };
+
+&mmc0 {
+    vmmc-supply = <&reg_dcdc1>;
+    bus-width = <4>;
+    // shortcut: poll until PB4 card-detect electrical behavior is validated.
+    broken-cd;
+    max-frequency = <25000000>;
+    no-1-8-v;
+    status = "okay";
+};
+
+// No battery model or charge-current/voltage overrides: preserve PMIC limits.
+&ac_power_supply { status = "okay"; };
+&usb_power_supply { status = "okay"; };
+&battery_power_supply { status = "okay"; };

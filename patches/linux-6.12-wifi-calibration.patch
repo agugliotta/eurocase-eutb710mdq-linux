@@ -1,0 +1,68 @@
+--- a/drivers/net/wireless/realtek/rtl8xxxu/8188e.c
++++ b/drivers/net/wireless/realtek/rtl8xxxu/8188e.c
+@@ -12,6 +12,10 @@
+  * their programming interface, I have started adding support for
+  * additional 8xxx chips like the 8192cu, 8188cus, etc.
+  */
++
++#include <linux/etherdevice.h>
++#include <linux/firmware.h>
++#include <linux/of.h>
+ 
+ #include "regs.h"
+ #include "rtl8xxxu.h"
+@@ -534,12 +538,54 @@
+ 	rtl8xxxu_write8(priv, REG_TRXDMA_CTRL, agg_ctrl);
+ }
+ 
++static bool eurocase_efuse_map_valid(const u8 *otp, const u8 *map, size_t size)
++{
++	unsigned int i;
++
++	if (size != 512 || map[0] != 0x29 || map[1] != 0x81 ||
++	    map[0xb9] == 0xff || memcmp(otp + 0x130, map + 0x130, 13))
++		return false;
++	for (i = 0x10; i < 0x1b; i++)
++		if (map[i] > 63)
++			return false;
++	return true;
++}
++
+ static int rtl8188eu_parse_efuse(struct rtl8xxxu_priv *priv)
+ {
+ 	struct rtl8188eu_efuse *efuse = &priv->efuse_wifi.efuse8188eu;
+ 
+ 	if (efuse->rtl_id != cpu_to_le16(0x8129))
+ 		return -EINVAL;
++
++	/* This tablet's stock driver supplies its missing calibration from a file. */
++	if (of_machine_is_compatible("eurocase,eutb-710mdq") &&
++	    !memchr_inv(&efuse->tx_power_index_A, 0xff, sizeof(efuse->tx_power_index_A)) &&
++	    efuse->xtal_k == 0xff) {
++		const struct firmware *map;
++		u8 original_mac[ETH_ALEN];
++		bool missing_mac = !is_valid_ether_addr(efuse->mac_addr);
++		int ret;
++
++		ret = request_firmware(&map, "rtlwifi/eurocase-g739-rtl8188eu-efuse.bin",
++				       &priv->udev->dev);
++		if (ret)
++			return ret;
++		if (!eurocase_efuse_map_valid((const u8 *)efuse, map->data, map->size)) {
++			release_firmware(map);
++			return -EINVAL;
++		}
++		ether_addr_copy(original_mac, efuse->mac_addr);
++		/* Replace only the software shadow, never program the physical eFuse. */
++		memcpy(efuse, map->data, sizeof(*efuse));
++		release_firmware(map);
++		if (missing_mac)
++			eth_random_addr(efuse->mac_addr);
++		else
++			ether_addr_copy(efuse->mac_addr, original_mac);
++		dev_info(&priv->udev->dev, "Eurocase stock calibration applied in RAM%s\n",
++			 missing_mac ? "; locally administered MAC" : "");
++	}
+ 
+ 	ether_addr_copy(priv->mac_addr, efuse->mac_addr);
+ 

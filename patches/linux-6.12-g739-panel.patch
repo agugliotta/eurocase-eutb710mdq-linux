@@ -1,0 +1,95 @@
+--- a/drivers/gpu/drm/panel/panel-simple.c
++++ b/drivers/gpu/drm/panel/panel-simple.c
+@@ -26,6 +26,7 @@
+ #include <linux/i2c.h>
+ #include <linux/media-bus-format.h>
+ #include <linux/module.h>
++#include <linux/pwm.h>
+ #include <linux/of_platform.h>
+ #include <linux/platform_device.h>
+ #include <linux/pm_runtime.h>
+@@ -137,6 +138,7 @@
+ };
+ 
+ struct panel_simple {
++	struct pwm_device *g739_vcom;
+ 	struct drm_panel base;
+ 
+ 	ktime_t unprepared_time;
+@@ -283,9 +285,26 @@
+ 		msleep(ktime_to_ms(ktime_sub(min_ktime, now_ktime)) + 1);
+ }
+ 
++static int g739_vcom_set(struct panel_simple *p, bool enabled)
++{
++    struct pwm_state state;
++
++    if (!p->g739_vcom)
++        return 0;
++    pwm_init_state(p->g739_vcom, &state);
++    /* Stock disp_lcdc_init: PWM1 period 66666ns, duty=period*200/1000. */
++    state.duty_cycle = state.period / 5;
++    state.enabled = enabled;
++    return pwm_apply_might_sleep(p->g739_vcom, &state);
++}
++
+ static int panel_simple_disable(struct drm_panel *panel)
+ {
+ 	struct panel_simple *p = to_panel_simple(panel);
++	int ret = g739_vcom_set(p, false);
++
++	if (ret)
++		return ret;
+ 
+ 	if (p->desc->delay.disable)
+ 		msleep(p->desc->delay.disable);
+@@ -356,6 +375,10 @@
+ static int panel_simple_enable(struct drm_panel *panel)
+ {
+ 	struct panel_simple *p = to_panel_simple(panel);
++	int ret = g739_vcom_set(p, true);
++
++	if (ret)
++		return ret;
+ 
+ 	if (p->desc->delay.enable)
+ 		msleep(p->desc->delay.enable);
+@@ -584,6 +607,12 @@
+ 		return -ENOMEM;
+ 
+ 	panel->desc = desc;
++
++    if (of_device_is_compatible(dev->of_node, "eurocase,g739-panel")) {
++        panel->g739_vcom = devm_pwm_get(dev, "vcom");
++        if (IS_ERR(panel->g739_vcom))
++            return dev_err_probe(dev, PTR_ERR(panel->g739_vcom), "VCOM PWM unavailable\n");
++    }
+ 
+ 	panel->supply = devm_regulator_get(dev, "power");
+ 	if (IS_ERR(panel->supply))
+@@ -4591,7 +4620,25 @@
+ 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
+ };
+ 
++/* Eurocase polaris-g739: recovered stock FEX and LCD open-flow. */
++static const struct drm_display_mode eurocase_g739_mode = {
++    .clock = 52000,
++    .hdisplay = 1024, .hsync_start = 1186, .hsync_end = 1206, .htotal = 1344,
++    .vdisplay = 600, .vsync_start = 610, .vsync_end = 613, .vtotal = 635,
++    .flags = DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
++};
++
++static const struct panel_desc eurocase_g739_panel = {
++    .modes = &eurocase_g739_mode, .num_modes = 1, .bpc = 6,
++    .size = { .width = 155, .height = 86 },
++    .delay = { .prepare = 10, .enable = 100, .disable = 10, .unprepare = 30 },
++    .bus_format = MEDIA_BUS_FMT_RGB666_1X18,
++    .bus_flags = DRM_BUS_FLAG_DE_HIGH | DRM_BUS_FLAG_PIXDATA_DRIVE_NEGEDGE,
++    .connector_type = DRM_MODE_CONNECTOR_DPI,
++};
++
+ static const struct of_device_id platform_of_match[] = {
++	{ .compatible = "eurocase,g739-panel", .data = &eurocase_g739_panel },
+ 	{
+ 		.compatible = "ampire,am-1280800n3tzqw-t00h",
+ 		.data = &ampire_am_1280800n3tzqw_t00h,
