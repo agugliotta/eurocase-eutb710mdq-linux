@@ -9,6 +9,10 @@ The practical reproduction path is to build the final SD system. The historical
 FEL and NAND experiments explain how its hardware configuration was discovered;
 NAND extraction is not a requirement for running Linux from a card.
 
+Historical script names below refer to the original research tree in the initial
+Git commit. The active source tree now keeps only the supported build path;
+see [BUILD.md](BUILD.md) to build without those experiments.
+
 ## 1. Identify the real hardware before choosing a board configuration
 
 The starting point was stock Android 4.2.2 with a 3.4.39 kernel and root ADB.

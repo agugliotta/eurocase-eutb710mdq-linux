@@ -1,12 +1,9 @@
-# Exported configuration baselines
+# Tracked configuration seeds
 
-Text configurations preserved from the local development build:
+- `installed/kernel.config`: effective kernel config accompanying the tested
+  panel v5 image. The build changes its local version and firmware directory.
+- `bringup/u-boot-spl.config`: the initial SPL config, transformed by the tracked
+  SD U-Boot script into its complete SD bootloader configuration.
 
-- `usb-root/kernel.config`: input expected by the earlier SD kernel stage.
-- `bringup/u-boot-spl.config`: input expected by the SD U-Boot stage.
-- `installed/`: kernel and U-Boot configs accompanying the tested panel v5 image.
-
-These are not all build inputs and do not reconstruct the image alone. Scripts
-still refer to their original `analysis/` paths. Paths and generated inputs need
-to be unified for a clean build; see ../docs/BUILD.md. No binaries or calibration
-maps are included.
+These are text inputs. No previous kernel or image binary is needed. See
+[BUILD.md](../docs/BUILD.md) for the complete Docker build procedure.

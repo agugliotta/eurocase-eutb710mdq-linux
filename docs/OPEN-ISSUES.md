@@ -67,5 +67,6 @@ long-press restart with USB attached was not isolated.
 
 Only one physical tablet was used. A small DRAM window passed patterns; full-RAM
 stress and prolonged retention tests were not performed. Long-term unattended
-operation and different board revisions are not established. A fresh-clone build
-also remains to be demonstrated, independently of the already working local image.
+operation and different board revisions are not established. The new self-contained Docker build passed offline checks with a new isolated
+cache; its output still needs hardware validation independently of the earlier
+installed image. See [build verification](BUILD-VERIFICATION.md).

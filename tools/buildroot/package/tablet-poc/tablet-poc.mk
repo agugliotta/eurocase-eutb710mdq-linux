@@ -5,7 +5,7 @@ TABLET_POC_LICENSE = GPL-2.0-or-later
 TABLET_POC_DEPENDENCIES = alsa-lib
 
 define TABLET_POC_BUILD_CMDS
-	$(TARGET_CC) $(TARGET_CFLAGS) -D_GNU_SOURCE -DPANEL_SD_BOOT -Wall -Wextra -Werror \
+	$(TARGET_CC) $(TARGET_CFLAGS) -D_GNU_SOURCE -DPANEL_SD_BOOT -DPANEL_POWER_ACTIONS -Wall -Wextra -Werror \
 		$(@D)/tablet-poc.c $(TARGET_LDFLAGS) -o $(@D)/tablet-poc -lasound -lm
 endef
 

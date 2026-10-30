@@ -1,5 +1,0 @@
-FROM tablet-a23-build:poc
-RUN apt-get update && apt-get install -y --no-install-recommends qemu-user && \
-    mkdir -p /opt/busybox-package /opt/busybox-root && cd /opt/busybox-package && \
-    apt-get download busybox-static:armhf && dpkg-deb -x ./*.deb /opt/busybox-root && \
-    rm -rf /var/lib/apt/lists/*

@@ -1,7 +1,0 @@
-#include "sun8i-a23-eurocase-eutb710mdq-nand-id.dts"
-
-&nfc {
-    nand@0 {
-        eurocase,boot-raw-capture;
-    };
-};

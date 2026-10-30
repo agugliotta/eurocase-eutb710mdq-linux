@@ -6,3 +6,6 @@ analysis/
 acquisition/
 *.img
 *.squashfs
+dist/
+firmware/*
+!firmware/README.md

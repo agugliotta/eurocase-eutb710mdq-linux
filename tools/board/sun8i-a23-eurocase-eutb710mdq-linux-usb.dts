@@ -1,8 +1,0 @@
-// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
-#include "sun8i-a23-eurocase-eutb710mdq-diagnostic.dts"
-
-/ {
-    chosen {
-        bootargs = "console=ttyS0,115200 console=ttyGS0,115200 earlycon=uart8250,mmio32,0x01c28000,115200n8 maxcpus=1 clk_ignore_unused loglevel=8 ignore_loglevel initcall_debug panic=0 rdinit=/init";
-    };
-};

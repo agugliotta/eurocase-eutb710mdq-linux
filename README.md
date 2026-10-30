@@ -10,7 +10,8 @@ independently of the dashboard application.
 **Status as of October 29, 2026:** a microSD image has been installed and tested
 on one tablet. Display, touch, Home, USB console/data, dashboard startup and
 restart through the dashboard work on that unit. Internal NAND has not been
-flashed. A fresh-clone build has not yet been demonstrated.
+flashed. A self-contained Docker build is now provided; new outputs require their own
+hardware validation. See [build verification](docs/BUILD-VERIFICATION.md).
 
 > [!WARNING]
 > **Experimental board-specific port for the Eurocase EUTB_710MDQ
@@ -21,9 +22,25 @@ flashed. A fresh-clone build has not yet been demonstrated.
 > touch configurations. Incorrect board settings can prevent boot or affect
 > hardware operation. Writing an SD image erases the selected card.
 > The development image exposes an unauthenticated root shell over USB.
-> No ready-to-flash binary release is provided; clean-clone reproduction
-> remains incomplete. Headphones worked, the built-in speaker is unresolved,
+> No ready-to-flash binary release is provided; the build requires two owner-supplied stock files. Headphones worked, the built-in speaker is unresolved,
 > and cameras were never tested.
+
+## Build it
+
+With Docker running, place the two stock board files from your own tablet in
+`firmware/` as described in [the extraction guide](firmware/README.md), then run:
+
+```sh
+make image
+```
+
+`sh build.sh` is equivalent. The build downloads verified source archives,
+compiles the system in its own container and writes `dist/sdcard.img`.
+No old images, research directories or pre-existing build volumes are needed.
+It never writes a card or accesses the tablet. See [the build guide](docs/BUILD.md).
+
+This builds the minimal tablet system; the Proxmox panel remains a separate
+archive. The resulting owner-local image is not a cleared binary release.
 
 ## Start here
 
@@ -32,7 +49,7 @@ flashed. A fresh-clone build has not yet been demonstrated.
 - [Unresolved issues and untested hardware](docs/OPEN-ISSUES.md)
 - [Hardware, supported features and limitations](docs/HARDWARE.md)
 - [Boot, installation and recovery](docs/INSTALLATION.md)
-- [Build architecture and reproducibility gaps](docs/BUILD.md)
+- [One-command build and validation limits](docs/BUILD.md)
 - [Repository split and publication plan](docs/PUBLISHING.md)
 
 ## Two related projects

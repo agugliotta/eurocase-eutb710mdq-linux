@@ -4,8 +4,9 @@
 
 There is no public downloadable release yet. The latest tested image exists
 locally at `analysis/panel/v5/image/sdcard.img`. Its hash is recorded in the
-[root README](../README.md). The current build scripts are development tooling,
-not yet a complete fresh-clone installation path.
+[root README](../README.md). To build your own base image, use `make image` as described in
+[BUILD.md](BUILD.md). Its output is `dist/sdcard.img`; the new build output is
+not the historical panel v5 image and requires independent hardware validation.
 
 This image runs Linux from microSD. It does not install Linux into internal NAND.
 Writing an image erases the destination card's existing partition layout/data.
@@ -49,8 +50,8 @@ init-supervised wrapper and retains `/usr/bin/tablet-poc` as a recovery tool.
    the panel and data without manually loading programs into RAM.
 
 No disk-write command is prescribed here until there is a reviewed public
-release and a portable installation guide. The existing local writer is
-`tools/build/write-sd.py`; review its arguments and device checks before use.
+release and a portable installation guide. Use an image writer that supports full readback verification. Historical
+research writer scripts are not required by the supported build.
 
 ## USB channels
 

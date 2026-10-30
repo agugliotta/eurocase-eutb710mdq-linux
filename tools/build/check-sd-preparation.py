@@ -9,7 +9,7 @@ import subprocess
 import zlib
 
 ROOT = Path(__file__).resolve().parents[2]
-IMAGE = ROOT / 'analysis/sd/image'
+IMAGE = ROOT / 'dist'
 
 
 def require(condition, message):
@@ -18,13 +18,11 @@ def require(condition, message):
 
 
 def check_sources():
-    for path in [ROOT / 'tools/buildroot/board/post-build.sh',
-                 ROOT / 'tools/buildroot/board/post-image.sh',
+    for path in [ROOT / 'build.sh', ROOT / 'tools/build/build.sh',
+                 ROOT / 'tools/build/build-a23-sd-uboot.sh',
+                 *ROOT.glob('tools/buildroot/board/*.sh'),
                  *ROOT.glob('tools/buildroot/board/rootfs-overlay/usr/bin/run-*'),
-                 ROOT / 'tools/buildroot/board/rootfs-overlay/etc/init.d/setup-usb',
-                 ROOT / 'tools/build/prepare-sd.sh',
-                 ROOT / 'tools/build/build-a23-sd-kernel.sh',
-                 ROOT / 'tools/build/build-a23-sd-uboot.sh']:
+                 ROOT / 'tools/buildroot/board/rootfs-overlay/etc/init.d/setup-usb']:
         subprocess.run(['sh', '-n', str(path)], check=True)
     sd = (ROOT / 'tools/board/sun8i-a23-eurocase-eutb710mdq-sd.dts').read_text()
     boot = (ROOT / 'tools/build/sd-boot.cmd').read_text()
@@ -42,12 +40,7 @@ def check_sources():
     init = (ROOT / 'tools/buildroot/board/rootfs-overlay/etc/inittab').read_text()
     require('run-debug-console' in init and 'run-panel' in init, 'Missing supervision')
     require('remount,rw' not in init and 'swapon' not in init, 'Unexpected disk writes')
-    baseline = ROOT / 'analysis/usb-root/image'
-    manifest = json.loads((baseline / 'manifest.json').read_text())
-    for name in ['kernel.config', 'zImage', 'board.dtb']:
-        actual = hashlib.sha256((baseline / name).read_bytes()).hexdigest()
-        require(actual == manifest['files'][name], f'Baseline hash mismatch: {name}')
-    print('Source checks OK; known-good FEL artifacts unchanged')
+    print('Tracked source checks OK; no historical baseline images required')
 
 
 def fdt_properties(data):
@@ -150,7 +143,8 @@ def check_image():
         for symbol in forbidden:
             require(f'CONFIG_{symbol}=y' not in lines, f'{config}: forbidden {symbol}')
     manifest = {'offline_checks_passed': True, 'hardware_boot_tested': False,
-                'sd_written': False,
+                'sd_written': False, 'public_distribution_cleared': False,
+                'application': 'tablet-poc (minimal local UI; no Proxmox panel)',
                 'files': {name: hashlib.sha256((IMAGE / name).read_bytes()).hexdigest()
                           for name in names}}
     (IMAGE / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

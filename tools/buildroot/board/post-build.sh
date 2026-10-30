@@ -7,5 +7,6 @@ rm -f "$target/etc/init.d/S40network" "$target/etc/init.d/S01syslogd" \
 mkdir -p "$target/lib/firmware/silead" "$target/lib/firmware/rtlwifi"
 cp /firmware/silead/eurocase-g739-gsl1680-1024x600.fw "$target/lib/firmware/silead/"
 cp /firmware/rtlwifi/rtl8188eufw.bin "$target/lib/firmware/rtlwifi/"
+cp /firmware/rtlwifi/eurocase-g739-rtl8188eu-efuse.bin "$target/lib/firmware/rtlwifi/"
 rm -rf "$target/var"
 ln -s run "$target/var"

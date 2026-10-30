@@ -1,96 +1,94 @@
-# Build architecture and reproducibility
+# Build a local microSD image
 
-## Current state
+The supported entry point is a self-contained Docker build. The host needs
+Docker running, internet access and a POSIX shell (Linux, macOS or WSL). `make` is a convenience:
+`sh build.sh` runs the same build. Python and the cross compiler run inside the
+container; no Python environment needs to be installed on the host to build.
 
-The tested images were built using this workstation's source trees, generated
-patches, earlier image/configuration baselines and Docker volumes. The sources
-under `tools/` are valuable, but copying that directory alone is insufficient
-to reproduce the installed image.
+## First build
 
-Do not describe `prepare-sd.sh` as a build of the latest panel v5 release. It
-constructs an earlier base, while later kernel, power, Wi-Fi and panel steps
-reuse artifacts from previous builds.
+1. Check the exact supported hardware and warnings in the root README.
+2. Put your own two stock board files in `firmware/`, following
+   [the extraction instructions](../firmware/README.md).
+3. From the repository root, run:
 
-## Components observed in the local build
+```sh
+make image
+```
 
-| Component | Version or identifier |
-| --- | --- |
-| Linux | 6.12, plus local board/display/Wi-Fi changes |
-| U-Boot source | `5508406582f6f7120dce0c4b3059819a41788db2` |
-| Buildroot | 2025.02.19 |
-| External toolchain | Bootlin ARMv7 hard-float/musl, 2024.05-1 |
-| LVGL | 9.4.0 |
-| cJSON | Vendored source; bundled license retained |
-| Host collector | Python standard library, systemd and udev |
+The output is `dist/sdcard.img`, accompanied by `SHA256SUMS`,
+`manifest.json`, effective kernel/U-Boot/Buildroot configs, and component images.
+`dist/` and the two stock files are ignored by Git. This command never writes
+an SD card, invokes ADB/FEL, touches USB or accesses the tablet. Card installation
+is a separate step described in [INSTALLATION.md](INSTALLATION.md).
 
-These identify the development inputs, not a claim about current upstream
-releases. Source archive hashes and all local modifications must accompany a
-reproducible release.
+The image contains the minimal local touchscreen application, USB debug/data
+functions, read-only rootfs and local power controls. It does **not** include
+the separately archived LVGL Proxmox dashboard or a Proxmox collector. Wi-Fi
+userspace tools are included; no SSID/password or automatic Wi-Fi setup is added.
+The existing local application retains its historical Spanish UI strings.
 
-## Existing source map
+## What the command handles
 
-| Location | Role |
-| --- | --- |
-| `tools/board/` | Device tree variants; SD includes display and peripheral variants |
-| `tools/buildroot/` | External tree, defconfig, root overlay and image layout |
-| `tools/build/prepare-sd.sh` | Earlier SD base-build orchestration |
-| `tools/build/build-a23-sd-uboot.sh` | SD bootloader adaptations and boot script generation |
-| `tools/build/patch-g739-panel.py` | Display driver generation/patch tooling |
-| `tools/build/build-a23-power-kernel.sh` | Watchdog/reset support on a previous kernel baseline |
-| `tools/build/patch-eurocase-wifi.py` | Board Wi-Fi calibration fallback patch |
-| `tools/build/build-a23-wifi-kernel.sh` | Later kernel configuration changes |
-| `tools/build/prepare-wifi-image.sh` | Adds Wi-Fi tools and kernel to an earlier image |
-| `tools/build/tablet-poc.c` | Minimal local test application |
-| `tools/panel/` | Dashboard, parser, transport, collector and host integration |
+- Builds its own tool container directly from Debian bookworm.
+- Fetches pinned Linux 6.12, U-Boot commit
+  `5508406582f6f7120dce0c4b3059819a41788db2` and Buildroot 2025.02.19 archives.
+- Verifies each archive and the licensed Realtek firmware by SHA-256 before use.
+- Applies the tracked display/Wi-Fi patches and U-Boot SD pinmux adjustment.
+- Converts your stock touch table and calibration into the expected inputs.
+- Builds kernel/DTB, SPL/U-Boot, musl userspace and the local application.
+- Assembles the SD image and runs structural checks and the ARM application
+  self-check under qemu-arm.
 
-Review the full include chain and each script's input paths before exporting
-files. Several diagnostic variants intentionally target earlier experiments.
+There is no dependency on an `analysis/` directory, an old image, a prebuilt
+`tablet-a23-build:*` container or the original workstation's Docker volumes.
+The configuration seeds under `config-baselines/` are tracked text inputs.
 
-## Inputs that must be recovered into the firmware source repository
+## Cache and resource use
 
-- The complete display driver currently supplied as
-  `.tools/overlays/panel-simple-g739.c`, preferably as a reviewable patch.
-- Exact initial kernel and U-Boot configuration baselines referenced from
-  `analysis/usb-root/image/` and `analysis/bringup/`.
-- All kernel changes needed for the final Wi-Fi/power build, not only defconfig
-  fragments or generated binaries.
-- The source/configuration of the validated recovery application; the current
-  release chain checks a particular earlier executable hash.
-- Touch firmware extraction inputs, extraction instructions and hashes, with
-  distribution status recorded. Apply the same review to Realtek firmware and
-  stock calibration data.
-- Container setup and toolchain setup currently assumed by
-  `tablet-a23-build:rootfs`, `tablet-a23-build:sd` and the
-  `tablet-a23-sd-buildroot` volume.
+Sources, downloads and build output use Docker volume `eutb710mdq-build`.
+Allow several GB of disk space and expect a long first compilation. Later builds
+reuse downloads/object files. The container uses `linux/amd64` because the
+Bootlin host toolchain is x86-64; Apple Silicon therefore requires Docker
+emulation and may build more slowly. The default parallelism is four jobs:
 
-The final panel packager uses an existing `/baseline` image. Its assertion that
-`tablet-poc` has a specific SHA-256 protects that local chain but also makes it
-unsuitable as a standalone build entry point.
+```sh
+JOBS=8 make image
+```
 
-## Public build target
+To exercise a separate empty build cache without deleting existing work:
 
-A finished firmware build should fetch pinned upstream sources, verify hashes,
-apply tracked patches, generate configs, build the bootloader/kernel/rootfs,
-assemble regular image files and verify the output. It should run in an empty
-build directory without this workstation's Docker volumes or `analysis/` tree.
+```sh
+BUILD_VOLUME=eutb710mdq-clean-check make image
+```
 
-Build a minimal firmware image first. Package the dashboard as an optional
-application from a pinned panel release. Record both repository revisions in
-any combined image manifest.
+A cached archive with an incorrect checksum causes an explicit failure; it is
+not silently accepted. A failed/incomplete download never becomes a cached source
+archive. Re-run after resolving the reported error. Changing a file in the
+read-only mounted source tree while a build runs is not supported.
 
-A clean build must check image boundaries, SPL checksums, kernel/DT/script
-headers, required kernel options, rootfs contents and application self-checks.
-Then test the resulting image on hardware: offline checks cannot establish
-boot, touchscreen operation, power behavior or USB recovery.
+Source versions and archives are pinned, but the Debian base/package security
+updates are not locked by digest. This is a reproducible procedure, not a claim
+of bit-identical binaries across all dates, host architectures and compiler
+package revisions.
 
-No build or hardware operation was run for this documentation change.
+## Offline checks and limitations
 
-## Inputs exported with this source publication
+`make test` runs the small build-tool regression suite using host Python 3. It
+checks input validation, malformed calibration/touch tables, cached-download
+integrity and failure before Docker when owner inputs are absent. The complete
+image build additionally checks the actual generated image and application.
 
-`config-baselines/` now preserves the earlier USB-root kernel config, initial
-SPL config and final installed kernel/U-Boot configs. `patches/` preserves the
-exact generated panel driver and Wi-Fi calibration changes as diffs against
-Linux 6.12. They do not contain calibration bytes. The original generation
-scripts are retained as research tools. Their historical `analysis/` and
-`.tools/` input paths have not been converted into a clean build entry point.
-Apply patches to the pinned original source, not an already patched tree.
+A successful build does not prove that its output boots on the physical tablet.
+Every new output manifest starts with `hardware_boot_tested=false` and
+`sd_written=false`. Earlier installed-image evidence must not be copied to a
+new image. No hardware test or SD write is performed automatically.
+
+## Private builds and public releases
+
+The two owner-supplied files remain necessary because their distribution status
+is separate from the open-source build machinery. The current build embeds the
+firmware to preserve early driver probing. Do not publish its binary output as
+if it were a cleared generic firmware release. A distribution build still needs
+separate firmware loading/provisioning, corresponding-source/license packaging
+and hardware validation. See the draft release and [open issues](OPEN-ISSUES.md).
